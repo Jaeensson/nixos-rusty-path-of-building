@@ -1,28 +1,25 @@
 {
-  description = "Nix package for Rusty Path of Building";
+  description = "Nix package + NixOS module for Rusty Path of Building";
 
-  inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-  };
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs";
 
   outputs = { self, nixpkgs }: let
-    supportedSystems = [ "x86_64-linux" "aarch64-linux" ];
-    forAllSystems = f: nixpkgs.lib.genAttrs supportedSystems (system:
-      f (import nixpkgs { inherit system; })
-    );
+    system = "x86_64-linux";
+    pkgs = import nixpkgs { inherit system; };
   in {
-    packages = forAllSystems (pkgs: {
-      default = pkgs.callPackage ./default.nix {};
-    });
+    # Regular package output
+    packages.${system}.default = pkgs.callPackage ./default.nix { };
 
-    # optional: allows `nix run` or `nix build`
-    defaultPackage = self.packages.x86_64-linux.default;
+    # --- NEW: NixOS module ---
+    nixosModules.rusty-path-of-building = { config, lib, pkgs, ... }: {
+      options.rusty-path-of-building.enable = lib.mkEnableOption "Rusty Path of Building";
 
-    # optional: allows `nix develop` if you want dev shell support
-    devShells = forAllSystems (pkgs: {
-      default = pkgs.mkShell {
-        buildInputs = [ pkgs.cargo pkgs.rustc ];
+      config = lib.mkIf config.rusty-path-of-building.enable {
+        environment.systemPackages = [ self.packages.${pkgs.system}.default ];
       };
-    });
+    };
+    
+    # Optional: flake `defaultPackage` shortcut
+    defaultPackage.${system} = self.packages.${system}.default;
   };
 }
