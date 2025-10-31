@@ -4,10 +4,13 @@
   inputs.nixpkgs.url = "github:NixOS/nixpkgs";
 
   outputs = { self, nixpkgs }: let
+    lib = nixpkgs.lib;
     supportedSystems = [ "x86_64-linux" "aarch64-linux" ];
-    forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
+    forAllSystems = lib.genAttrs supportedSystems;
   in {
-    # Package for each system
+    # -----------------
+    # Packages
+    # -----------------
     packages = forAllSystems (system:
       let
         pkgs = import nixpkgs { inherit system; };
@@ -16,14 +19,21 @@
       }
     );
 
-    nixosModules.rusty-path-of-building = { config, lib, pkgs, ... }: {
-      options.rusty-path-of-building.enable = lib.mkEnableOption "Rusty Path of Building";
+    # -----------------
+    # NixOS module
+    # -----------------
+    nixosModules = {
+      rusty-path-of-building = { config, lib, pkgs, ... }: with lib; {
+        options.rusty-path-of-building.enable =
+          mkEnableOption "Enable Rusty Path of Building (PoB in Rust)";
 
-      config = lib.mkIf config.rusty-path-of-building.enable {
-        environment.systemPackages = [ self.packages.${pkgs.system}.default ];
+        config = mkIf config.rusty-path-of-building.enable {
+          environment.systemPackages = [ self.packages.${pkgs.system}.default ];
+        };
       };
     };
-    # Optional shortcuts
+
+    # Optional defaultPackage shortcut
     defaultPackage = forAllSystems (system: self.packages.${system}.default);
   };
 }

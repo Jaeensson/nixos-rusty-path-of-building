@@ -1,22 +1,23 @@
-{ lib
-, rustPlatform
-, fetchFromGitHub
-, pkg-config
-, makeWrapper
-, luajitPackages
-, luajit
-, wayland
-, libxkbcommon
-, xorg
-, vulkan-loader
-, libGL
-, zlib
-,makeDesktopItem
+{
+  lib,
+  rustPlatform,
+  fetchFromGitHub,
+  pkg-config,
+  makeWrapper,
+  luajitPackages,
+  luajit,
+  wayland,
+  libxkbcommon,
+  xorg,
+  vulkan-loader,
+  libGL,
+  zlib,
+  makeDesktopItem
 }:
 
 let
   # Lua modules to use at runtime
-  luaModules = [ 
+  luaModules = [
     luajitPackages.lua-curl
     luajitPackages.luautf8
     luajitPackages.luasocket
@@ -121,9 +122,21 @@ rustPlatform.buildRustPackage rec {
         "path"
         "exile"
       ];
-      #mimeTypes = [ "x-scheme-handler/pob" ];
     })
   ];
+
+  installPhase = ''
+    runHook preInstall
+
+    mkdir -p $out/share/applications
+
+    # Install desktop entries
+    for item in ${lib.concatStringsSep " " (map (x: "${x}/share/applications/*") desktopItems)}; do
+      cp $item $out/share/applications/
+    done
+
+    runHook postInstall
+  '';
 
 
   meta = with lib; {
