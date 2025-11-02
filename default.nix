@@ -48,7 +48,7 @@ rustPlatform.buildRustPackage rec {
 
   # Build & runtime dependencies
   buildInputs = [
-    luajit              # Required by mlua-sys
+    luajit
     wayland
     libxkbcommon
     xorg.libX11
@@ -67,23 +67,32 @@ rustPlatform.buildRustPackage rec {
     g++ -O2 -shared -fPIC -o $out/lib/lua/5.1/lzip.so lzip.cpp $(pkg-config --libs zlib)
     popd
   '';
+  postBuild = ''
+    # Use cargo install to put binary into $out
+    cargo install --locked --path . --root $out --force
+  '';
 
   # Wrap binary with LuaJIT paths, LD_LIBRARY_PATH, and Wayland/X11 detection
   postFixup = ''
-    wrapProgram $out/bin/rusty-path-of-building \
-      --set-default WGPU_BACKEND "gl" \
-      --run 'if [ -n "$WAYLAND_DISPLAY" ]; then
-                echo "💡 Detected Wayland session"
-                export GDK_BACKEND=wayland
-                export WINIT_UNIX_BACKEND=wayland
-             else
-                echo "💡 Detected X11 session"
-                export GDK_BACKEND=x11
-                export WINIT_UNIX_BACKEND=x11
-             fi' \
-      --prefix LD_LIBRARY_PATH : "${lib.makeLibraryPath buildInputs}" \
-      --set LUA_PATH "${luaEnv.LUA_PATH}" \
-      --set LUA_CPATH "${luaEnv.LUA_CPATH};$out/lib/lua/5.1/?.so"
+    for exe in $out/bin/*; do
+      if [ -f "$exe" ] && [ -x "$exe" ]; then
+        echo "Wrapping $exe"
+        wrapProgram "$exe" \
+          --run 'if [ -n "$WAYLAND_DISPLAY" ]; then
+                  echo "💡 Detected Wayland session"
+                  export GDK_BACKEND=wayland
+                  export WINIT_UNIX_BACKEND=wayland
+              else
+                  echo "💡 Detected X11 session"
+                  export GDK_BACKEND=x11
+                  export WINIT_UNIX_BACKEND=x11
+              fi' \
+          --set-default WGPU_BACKEND "gl" \
+          --prefix LD_LIBRARY_PATH : "${lib.makeLibraryPath buildInputs}" \
+          --set LUA_PATH "${luaEnv.LUA_PATH}" \
+          --set LUA_CPATH "${luaEnv.LUA_CPATH};$out/lib/lua/5.1/?.so"
+      fi
+    done
   '';
 
   desktopItems = [
@@ -110,7 +119,7 @@ rustPlatform.buildRustPackage rec {
       name = "rusty-path-of-building2";
       desktopName = "Path of Building 2";
       comment = "Offline build planner for Path of Exile 2";
-      exec = "rusty-path-of-building poe %U";
+      exec = "rusty-path-of-building poe2 %U";
       terminal = false;
       type = "Application";
       #icon = "pathofbuilding";
@@ -127,14 +136,11 @@ rustPlatform.buildRustPackage rec {
 
   installPhase = ''
     runHook preInstall
-
+   
     mkdir -p $out/share/applications
-
-    # Install desktop entries
-    for item in ${lib.concatStringsSep " " (map (x: "${x}/share/applications/*") desktopItems)}; do
-      cp $item $out/share/applications/
+    for item in ${toString (map (x: "${x}/share/applications" ) desktopItems)}; do
+      cp "$item"/* $out/share/applications/
     done
-
     runHook postInstall
   '';
 
