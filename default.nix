@@ -12,9 +12,9 @@
   vulkan-loader,
   libGL,
   zlib,
-  makeDesktopItem
+  makeDesktopItem,
+  pkgs
 }:
-
 let
   # Lua modules to use at runtime
   luaModules = [
@@ -29,17 +29,34 @@ let
   };
 
   luaEnv = mkLuaEnv luaModules;
+
+  # upstream GitHub source
+  srcGitHub = fetchFromGitHub {
+    owner = "meehl";
+    repo = "rusty-path-of-building";
+    rev = "v0.2.6";
+    hash = "sha256-U2OWNV8bUNXo8/Sro+gV/o3O/D1lMWVlbX3tCONmGOk=";
+  };
+
+  # your local folder containing icons
+  srcIcons = ./icons;
+
+  # combined source
+  src = pkgs.runCommand "rusty-path-of-building-src" {
+    inherit srcGitHub srcIcons;
+  } ''
+    mkdir -p $out/icons
+    cp -r $srcGitHub/* $out/
+    cp $srcIcons/pob.png  $out/icons/pob.png
+    cp $srcIcons/pob2.png $out/icons/pob2.png
+  '';
+
 in
 rustPlatform.buildRustPackage rec {
   pname = "rusty-path-of-building";
   version = "0.2.6";
 
-  src = fetchFromGitHub {
-    owner = "meehl";
-    repo = "rusty-path-of-building";
-    rev = "v${version}";
-    hash = "sha256-U2OWNV8bUNXo8/Sro+gV/o3O/D1lMWVlbX3tCONmGOk=";
-  };
+  inherit src;
 
   cargoHash = "sha256-xB7nhCqUalGE0M762Zw7vVFKzz/TgnMU77xbEHorJ2U=";
   cargoLock = { lockFile = ./Cargo.lock; };
@@ -61,12 +78,13 @@ rustPlatform.buildRustPackage rec {
   ] ++ luaModules;
 
   preBuild = ''
-    echo "Building lzip module..."
+    # Build lzip
     mkdir -p $out/lib/lua/5.1
     pushd lua/libs/lzip/src
     g++ -O2 -shared -fPIC -o $out/lib/lua/5.1/lzip.so lzip.cpp $(pkg-config --libs zlib)
     popd
   '';
+  
   postBuild = ''
     # Use cargo install to put binary into $out
     cargo install --locked --path . --root $out --force
@@ -103,7 +121,7 @@ rustPlatform.buildRustPackage rec {
       exec = "rusty-path-of-building poe1 %U";
       terminal = false;
       type = "Application";
-      #icon = "pathofbuilding";
+      icon = "pob";
       categories = [ "Game" ];
       keywords = [
         "poe"
@@ -122,7 +140,7 @@ rustPlatform.buildRustPackage rec {
       exec = "rusty-path-of-building poe2 %U";
       terminal = false;
       type = "Application";
-      #icon = "pathofbuilding";
+      icon = "pob2";
       categories = [ "Game" ];
       keywords = [
         "poe"
@@ -136,14 +154,20 @@ rustPlatform.buildRustPackage rec {
 
   installPhase = ''
     runHook preInstall
-   
+
+    # Install icons
+    mkdir -p $out/share/icons/hicolor/128x128/apps
+    install -Dm644 $src/icons/pob.png  $out/share/icons/hicolor/128x128/apps/pob.png
+    install -Dm644 $src/icons/pob2.png $out/share/icons/hicolor/128x128/apps/pob2.png
+
+    # Install desktop entries
     mkdir -p $out/share/applications
     for item in ${toString (map (x: "${x}/share/applications" ) desktopItems)}; do
       cp "$item"/* $out/share/applications/
     done
+
     runHook postInstall
   '';
-
 
   meta = with lib; {
     description = "Rust-based Path of Building fork";
