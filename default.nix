@@ -34,8 +34,8 @@ let
   srcGitHub = fetchFromGitHub {
     owner = "meehl";
     repo = "rusty-path-of-building";
-    rev = "v0.2.6";
-    hash = "sha256-U2OWNV8bUNXo8/Sro+gV/o3O/D1lMWVlbX3tCONmGOk=";
+    rev = "v0.2.7";
+    hash = "sha256-J/tTifOcbY1mfcNbQFN4Vdyl78O7vTVbfew3fcnVyTA=";
   };
 
   # your local folder containing icons
@@ -54,12 +54,11 @@ let
 in
 rustPlatform.buildRustPackage rec {
   pname = "rusty-path-of-building";
-  version = "0.2.6";
+  version = "0.2.7";
 
   inherit src;
 
-  cargoHash = "sha256-xB7nhCqUalGE0M762Zw7vVFKzz/TgnMU77xbEHorJ2U=";
-  cargoLock = { lockFile = ./Cargo.lock; };
+  cargoLock = { lockFile = "${srcGitHub}/Cargo.lock"; };
 
   nativeBuildInputs = [ pkg-config makeWrapper ];
 
@@ -115,7 +114,7 @@ rustPlatform.buildRustPackage rec {
 
   desktopItems = [
     (makeDesktopItem {
-      name = "rusty-path-of-building";
+      name = "rusty-path-of-building-1";
       desktopName = "Path of Building";
       comment = "Offline build planner for Path of Exile";
       exec = "rusty-path-of-building poe1 %U";
@@ -134,7 +133,7 @@ rustPlatform.buildRustPackage rec {
     })
 
     (makeDesktopItem {
-      name = "rusty-path-of-building2";
+      name = "rusty-path-of-building-2";
       desktopName = "Path of Building 2";
       comment = "Offline build planner for Path of Exile 2";
       exec = "rusty-path-of-building poe2 %U";
