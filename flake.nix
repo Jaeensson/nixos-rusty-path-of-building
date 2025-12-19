@@ -28,7 +28,7 @@
           mkEnableOption "Enable Rusty Path of Building (PoB in Rust)";
 
         config = mkIf config.rusty-path-of-building.enable {
-          environment.systemPackages = [ self.packages.${pkgs.system}.default ];
+          environment.systemPackages = [ self.packages.${pkgs.stdenv.hostPlatform.system}.default ];
         };
       };
     };
