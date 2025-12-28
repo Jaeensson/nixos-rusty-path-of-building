@@ -148,6 +148,7 @@ rustPlatform.buildRustPackage rec {
         "path"
         "exile"
       ];
+      mimeTypes = [ "x-scheme-handler/pob2" ];
     })
   ];
 
