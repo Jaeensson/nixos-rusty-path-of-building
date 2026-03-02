@@ -13,7 +13,7 @@
   libGL,
   zlib,
   makeDesktopItem,
-  pkgs
+  pkgs,
 }:
 let
   # Lua modules to use at runtime
@@ -24,7 +24,9 @@ let
   ];
 
   mkLuaEnv = luaPkgs: {
-    LUA_PATH = lib.concatStringsSep ";" (map (p: "${p}/share/lua/5.1/?.lua;${p}/share/lua/5.1/?/init.lua") luaPkgs);
+    LUA_PATH = lib.concatStringsSep ";" (
+      map (p: "${p}/share/lua/5.1/?.lua;${p}/share/lua/5.1/?/init.lua") luaPkgs
+    );
     LUA_CPATH = lib.concatStringsSep ";" (map (p: "${p}/lib/lua/5.1/?.so") luaPkgs);
   };
 
@@ -42,14 +44,17 @@ let
   srcIcons = ./icons;
 
   # combined source
-  src = pkgs.runCommand "rusty-path-of-building-src" {
-    inherit srcGitHub srcIcons;
-  } ''
-    mkdir -p $out/icons
-    cp -r $srcGitHub/* $out/
-    cp $srcIcons/pob.png  $out/icons/pob.png
-    cp $srcIcons/pob2.png $out/icons/pob2.png
-  '';
+  src =
+    pkgs.runCommand "rusty-path-of-building-src"
+      {
+        inherit srcGitHub srcIcons;
+      }
+      ''
+        mkdir -p $out/icons
+        cp -r $srcGitHub/* $out/
+        cp $srcIcons/pob.png  $out/icons/pob.png
+        cp $srcIcons/pob2.png $out/icons/pob2.png
+      '';
 
 in
 rustPlatform.buildRustPackage rec {
@@ -58,9 +63,14 @@ rustPlatform.buildRustPackage rec {
 
   inherit src;
 
-  cargoLock = { lockFile = "${srcGitHub}/Cargo.lock"; };
+  cargoLock = {
+    lockFile = "${srcGitHub}/Cargo.lock";
+  };
 
-  nativeBuildInputs = [ pkg-config makeWrapper ];
+  nativeBuildInputs = [
+    pkg-config
+    makeWrapper
+  ];
 
   # Build & runtime dependencies
   buildInputs = [
@@ -74,7 +84,8 @@ rustPlatform.buildRustPackage rec {
     vulkan-loader
     libGL
     zlib
-  ] ++ luaModules;
+  ]
+  ++ luaModules;
 
   preBuild = ''
     # Build lzip
@@ -83,7 +94,7 @@ rustPlatform.buildRustPackage rec {
     g++ -O2 -shared -fPIC -o $out/lib/lua/5.1/lzip.so lzip.cpp $(pkg-config --libs zlib)
     popd
   '';
-  
+
   postBuild = ''
     # Use cargo install to put binary into $out
     cargo install --locked --path . --root $out --force
@@ -162,7 +173,7 @@ rustPlatform.buildRustPackage rec {
 
     # Install desktop entries
     mkdir -p $out/share/applications
-    for item in ${toString (map (x: "${x}/share/applications" ) desktopItems)}; do
+    for item in ${toString (map (x: "${x}/share/applications") desktopItems)}; do
       cp "$item"/* $out/share/applications/
     done
 
