@@ -20,7 +20,7 @@ jobs:
       - name: Check for new upstream release
         id: check
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.UPDATE_TOKEN }}
         run: |
           # Get latest release tag from upstream
           LATEST_TAG=$(gh release list \
@@ -82,7 +82,7 @@ jobs:
         if: steps.check.outputs.needs_update == 'true'
         uses: peter-evans/create-pull-request@v7
         with:
-          token: ${{ github.token }}
+          token: ${{ secrets.UPDATE_TOKEN }}
           branch: "auto-update/${{ steps.check.outputs.latest_tag }}"
           commit-message: "chore: update rusty-path-of-building to ${{ steps.check.outputs.latest_tag }}"
           title: "chore: update rusty-path-of-building to ${{ steps.check.outputs.latest_tag }}"
