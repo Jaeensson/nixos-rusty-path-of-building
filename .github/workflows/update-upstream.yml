@@ -1,0 +1,97 @@
+name: Update upstream rusty-path-of-building
+on:
+  schedule:
+    # Every Monday at 08:00 UTC
+    - cron: "0 8 * * 1"
+  workflow_dispatch:
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+      - name: Check for new upstream release
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Get latest release tag from upstream
+          LATEST_TAG=$(gh release list \
+            --repo meehl/rusty-path-of-building \
+            --limit 1 \
+            --json tagName \
+            --jq '.[0].tagName')
+
+          echo "Latest upstream tag: $LATEST_TAG"
+
+          # Get current rev from default.nix
+          CURRENT_REV=$(grep -oP '(?<=rev = ").*?(?=";)' default.nix | head -1)
+          echo "Current rev in default.nix: $CURRENT_REV"
+
+          if [ "$LATEST_TAG" = "$CURRENT_REV" ]; then
+            echo "Already up to date."
+            echo "needs_update=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Update available: $CURRENT_REV -> $LATEST_TAG"
+            echo "needs_update=true" >> "$GITHUB_OUTPUT"
+            echo "latest_tag=$LATEST_TAG" >> "$GITHUB_OUTPUT"
+            # Strip leading 'v' for the version field
+            echo "version=${LATEST_TAG#v}" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Compute new hash
+        id: hash
+        if: steps.check.outputs.needs_update == 'true'
+        run: |
+          LATEST_TAG="${{ steps.check.outputs.latest_tag }}"
+
+          # nix-prefetch-github outputs a JSON with a narHash field (SRI format)
+          HASH=$(nix run nixpkgs#nix-prefetch-github -- \
+            --rev "$LATEST_TAG" \
+            --json \
+            meehl rusty-path-of-building \
+            | jq -r '.hash')
+
+          echo "New hash: $HASH"
+          echo "hash=$HASH" >> "$GITHUB_OUTPUT"
+      - name: Update default.nix
+        if: steps.check.outputs.needs_update == 'true'
+        run: |
+          LATEST_TAG="${{ steps.check.outputs.latest_tag }}"
+          VERSION="${{ steps.check.outputs.version }}"
+          HASH="${{ steps.hash.outputs.hash }}"
+
+          # Update rev
+          sed -i "s|rev = \".*\";|rev = \"$LATEST_TAG\";|" default.nix
+
+          # Update hash (the fetchFromGitHub hash, first occurrence)
+          sed -i "0,/hash = \".*\";/s|hash = \".*\";|hash = \"$HASH\";|" default.nix
+
+          # Update version field
+          sed -i "s|version = \".*\";|version = \"$VERSION\";|" default.nix
+
+          echo "Updated default.nix:"
+          grep -E 'rev =|hash =|version =' default.nix
+      - name: Open pull request
+        if: steps.check.outputs.needs_update == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ github.token }}
+          branch: "auto-update/${{ steps.check.outputs.latest_tag }}"
+          commit-message: "chore: update rusty-path-of-building to ${{ steps.check.outputs.latest_tag }}"
+          title: "chore: update rusty-path-of-building to ${{ steps.check.outputs.latest_tag }}"
+          body: |
+            Automated update of the upstream [rusty-path-of-building](https://github.com/meehl/rusty-path-of-building) package.
+
+            - **New version:** `${{ steps.check.outputs.latest_tag }}`
+            - **Changelog:** https://github.com/meehl/rusty-path-of-building/releases/tag/${{ steps.check.outputs.latest_tag }}
+
+            This PR was opened automatically by the update workflow.
+          labels: dependencies
+          delete-branch: true

@@ -59,7 +59,7 @@ let
 in
 rustPlatform.buildRustPackage rec {
   pname = "rusty-path-of-building";
-  version = "0.2.10";
+  version = "0.2.13";
 
   inherit src;
 
