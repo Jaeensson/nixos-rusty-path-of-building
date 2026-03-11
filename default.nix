@@ -8,7 +8,6 @@
   luajit,
   wayland,
   libxkbcommon,
-  xorg,
   vulkan-loader,
   libGL,
   zlib,
@@ -77,10 +76,10 @@ rustPlatform.buildRustPackage rec {
     luajit
     wayland
     libxkbcommon
-    xorg.libX11
-    xorg.libXcursor
-    xorg.libXi
-    xorg.libXrandr
+    pkgs.libx11
+    pkgs.libxcursor
+    pkgs.libxi
+    pkgs.libxrandr
     vulkan-loader
     libGL
     zlib
