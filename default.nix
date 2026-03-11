@@ -36,7 +36,7 @@ let
   srcGitHub = fetchFromGitHub {
     owner = "meehl";
     repo = "rusty-path-of-building";
-    rev = "v0.2.13";
+    rev = "v0.2.10";
     hash = "sha256-4lxMQfENucDaDZov82iZD5DMgksLuJ/2nXUKYYf/m/w=";
   };
 
@@ -59,7 +59,7 @@ let
 in
 rustPlatform.buildRustPackage rec {
   pname = "rusty-path-of-building";
-  version = "0.2.13";
+  version = "0.2.10";
 
   inherit src;
 
