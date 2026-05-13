@@ -83,6 +83,7 @@ rustPlatform.buildRustPackage rec {
     vulkan-loader
     libGL
     zlib
+    pkgs.fontconfig
   ]
   ++ luaModules;
 
