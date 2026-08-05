@@ -1,0 +1,27 @@
+Fix Lua `require()` for modules in the top-level script directory (e.g. `Data/`)
+
+PoB v2.66.0+ added `require("Data.StatDescriptions.stat_descriptions")` in
+`src/Classes/TradeHelpers.lua`. The RPOB host only registered
+`${script_dir}/lua/?.lua` on `package.path`, so requires of modules that live
+at the top level of the script directory (like `Data/...`) could never
+resolve. Register the script dir itself as well, mirroring the original PoB
+host behavior.
+
+diff --git a/src/lua.rs b/src/lua.rs
+--- a/src/lua.rs
++++ b/src/lua.rs
+@@ -308,9 +308,13 @@ impl LuaInstance {
+-    /// Adds "${script_dir}/lua" to package path
++    /// Adds "${script_dir}" and "${script_dir}/lua" to package path
+     pub fn register_package_paths(lua: &Lua, script_dir: &PathBuf) -> LuaResult<()> {
+         let package: Table = lua.globals().get("package")?;
+         let mut package_path: String = package.get("path")?;
+         package_path.push(';');
++        package_path.push_str(script_dir.join("?.lua").to_str().unwrap());
++        package_path.push(';');
++        package_path.push_str(script_dir.join("?/init.lua").to_str().unwrap());
++        package_path.push(';');
+         package_path.push_str(script_dir.join("lua/?.lua").to_str().unwrap());
+         package_path.push(';');
+         package_path.push_str(script_dir.join("lua/?/init.lua").to_str().unwrap());
+         package.set("path", package_path)?;

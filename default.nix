@@ -62,6 +62,12 @@ rustPlatform.buildRustPackage rec {
 
   inherit src;
 
+  # PoB 2.66+ uses require("Data.StatDescriptions.stat_descriptions") in
+  # Classes/TradeHelpers.lua, which needs the top-level script dir on
+  # package.path. RPOB 0.2.18 only registers <script_dir>/lua, so the module
+  # is never found. See lua-package-path.patch.
+  patches = [ ./patches/lua-package-path.patch ];
+
   cargoLock = {
     lockFile = "${srcGitHub}/Cargo.lock";
   };
