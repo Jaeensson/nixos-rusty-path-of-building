@@ -35,8 +35,8 @@ let
   srcGitHub = fetchFromGitHub {
     owner = "meehl";
     repo = "rusty-path-of-building";
-    rev = "v0.2.18";
-    hash = "sha256-9YHXTUtTJO3GPf+NqASEkxf+a94doBGTjLyYruuxRg4=";
+    rev = "v0.3.3";
+    hash = "sha256-hi3hNoD21d60wjY8H/T9bvBLNhpq2+r0q4EzVRhicpA=";
   };
 
   # your local folder containing icons
@@ -58,7 +58,7 @@ let
 in
 rustPlatform.buildRustPackage rec {
   pname = "rusty-path-of-building";
-  version = "0.2.18";
+  version = "0.3.3";
 
   inherit src;
 
