@@ -70,6 +70,9 @@ rustPlatform.buildRustPackage rec {
 
   cargoLock = {
     lockFile = "${srcGitHub}/Cargo.lock";
+    outputHashes = {
+      "luautf8-rs-0.1.0" = "sha256-RCHy/oOUQbeSVnvGDORMVsxmAHRJSxMb3uQFWg5/HoQ=";
+    };
   };
 
   nativeBuildInputs = [
@@ -90,16 +93,9 @@ rustPlatform.buildRustPackage rec {
     libGL
     zlib
     pkgs.fontconfig
+    pkgs.openssl
   ]
   ++ luaModules;
-
-  preBuild = ''
-    # Build lzip
-    mkdir -p $out/lib/lua/5.1
-    pushd lua/libs/lzip/src
-    g++ -O2 -shared -fPIC -o $out/lib/lua/5.1/lzip.so lzip.cpp $(pkg-config --libs zlib)
-    popd
-  '';
 
   postBuild = ''
     # Use cargo install to put binary into $out
@@ -124,7 +120,7 @@ rustPlatform.buildRustPackage rec {
           --set-default WGPU_BACKEND "gl" \
           --prefix LD_LIBRARY_PATH : "${lib.makeLibraryPath buildInputs}" \
           --set LUA_PATH "${luaEnv.LUA_PATH}" \
-          --set LUA_CPATH "${luaEnv.LUA_CPATH};$out/lib/lua/5.1/?.so"
+          --set LUA_CPATH "${luaEnv.LUA_CPATH}"
       fi
     done
   '';

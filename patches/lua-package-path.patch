@@ -1,27 +1,26 @@
 Fix Lua `require()` for modules in the top-level script directory (e.g. `Data/`)
 
 PoB v2.66.0+ added `require("Data.StatDescriptions.stat_descriptions")` in
-`src/Classes/TradeHelpers.lua`. The RPOB host only registered
+`src/Classes/TradeHelpers.lua`. The RPOB host only registers
 `${script_dir}/lua/?.lua` on `package.path`, so requires of modules that live
-at the top level of the script directory (like `Data/...`) could never
-resolve. Register the script dir itself as well, mirroring the original PoB
-host behavior.
+at the top level of the script directory (like `Data/...`) can never resolve.
+Register the script dir itself as well, mirroring the original PoB host
+behavior.
 
-diff --git a/src/lua.rs b/src/lua.rs
---- a/src/lua.rs
-+++ b/src/lua.rs
-@@ -308,9 +308,13 @@ impl LuaInstance {
--    /// Adds "${script_dir}/lua" to package path
-+    /// Adds "${script_dir}" and "${script_dir}/lua" to package path
-     pub fn register_package_paths(lua: &Lua, script_dir: &PathBuf) -> LuaResult<()> {
-         let package: Table = lua.globals().get("package")?;
-         let mut package_path: String = package.get("path")?;
-         package_path.push(';');
-+        package_path.push_str(script_dir.join("?.lua").to_str().unwrap());
-+        package_path.push(';');
-+        package_path.push_str(script_dir.join("?/init.lua").to_str().unwrap());
-+        package_path.push(';');
-         package_path.push_str(script_dir.join("lua/?.lua").to_str().unwrap());
-         package_path.push(';');
-         package_path.push_str(script_dir.join("lua/?/init.lua").to_str().unwrap());
-         package.set("path", package_path)?;
+In 0.3.3 the Lua setup moved from `src/lua.rs` (register_package_paths) to
+`src/pob.rs` (create_lua / util::append_lua_package_dir), so this version of
+the patch targets that new call site.
+
+diff --git a/src/pob.rs b/src/pob.rs
+--- a/src/pob.rs
++++ b/src/pob.rs
+@@ -111,6 +111,9 @@ impl PathOfBuilding {
+         // `unsafe_new` needed to allow loading of C modules
+         let lua = unsafe { Lua::unsafe_new() };
+         append_lua_package_dir(&lua, &ctx.script_dir.join("lua"))?;
++        // PoB 2.66+ requires modules from the top-level script directory
++        // (e.g. `Data.StatDescriptions.stat_descriptions`), not just `lua/`.
++        append_lua_package_dir(&lua, &ctx.script_dir)?;
+ 
+         // expose import url to lua
+         let args = Args::parse();
