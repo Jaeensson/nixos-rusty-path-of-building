@@ -11,6 +11,8 @@
   vulkan-loader,
   libGL,
   zlib,
+  zstd,
+  aws-lc,
   makeDesktopItem,
   pkgs,
 }:
@@ -81,6 +83,12 @@ rustPlatform.buildRustPackage rec {
   ];
 
   # Build & runtime dependencies
+  #
+  # zstd and aws-lc are required because nixpkgs' cargo-setup-hook forces
+  # every -sys crate onto the system library: it exports
+  # ZSTD_SYS_USE_PKG_CONFIG=1 and AWS_LC_SYS_USE_SYSTEM=1, so zstd-sys and
+  # aws-lc-sys panic in their build scripts unless those libs are on
+  # PKG_CONFIG_PATH (mirrors nixpkgs' own zstd-sys/aws-lc-sys crate overrides).
   buildInputs = [
     luajit
     wayland
@@ -92,6 +100,8 @@ rustPlatform.buildRustPackage rec {
     vulkan-loader
     libGL
     zlib
+    zstd
+    aws-lc
     pkgs.fontconfig
     pkgs.openssl
   ]
